@@ -1,62 +1,81 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-int n, m;
-int dp[1001][1001];
+struct Line {
+    long long m, c;
+    long long eval(long long x) { return m * x + c; }
+    long double intersect(Line l) { return (long double)(c - l.c) / (l.m - m); }
+};
 
-int helper(int idx, int lastRobot, vector<int> &v)
-{
-  if (idx == v.size())
-  {
-    return 0;
-  }
+void solve() {
+    int n;
+    long long m_cost;
+    cin >> n >> m_cost;
+    vector<long long> v(n);
+    int firstNonZero = -1;
+    
+    for (int i = 0; i < n; i++) {
+        cin >> v[i];
+        if (v[i] != 0 && firstNonZero == -1) {
+            firstNonZero = i;
+        }
+    }
 
-  if (dp[idx][lastRobot] != -1)
-  {
-    return dp[idx][lastRobot];
-  }
+    if (firstNonZero == -1) {
+        cout << 0 << "\n";
+        return;
+    }
 
-  int usePrevRobot = (idx - lastRobot) * v[idx] + helper(idx + 1, lastRobot, v);
-  int newRobot = m + helper(idx + 1, idx, v);
+    vector<long long> S0(n, 0), S1(n, 0);
+    S0[0] = v[0];
+    S1[0] = 0;
+    
+    for (int i = 1; i < n; i++) {
+        S0[i] = S0[i - 1] + v[i];
+        S1[i] = S1[i - 1] + (long long)i * v[i];
+    }
 
-  return dp[idx][lastRobot] = min(usePrevRobot, newRobot);
+    vector<long long> dp(n, 0);
+    dp[firstNonZero] = m_cost;
+
+    deque<Line> dq;
+    dq.push_back({-firstNonZero, dp[firstNonZero] - S1[firstNonZero] + firstNonZero * S0[firstNonZero]});
+
+    for (int i = firstNonZero + 1; i < n; i++) {
+        long long x = S0[i - 1];
+        
+        while (dq.size() >= 2 && dq[0].eval(x) >= dq[1].eval(x)) {
+            dq.pop_front();
+        }
+        
+        dp[i] = m_cost + S1[i - 1] + dq[0].eval(x);
+
+        Line newLine = {-i, dp[i] - S1[i] + i * S0[i]};
+        
+        while (dq.size() >= 2 && dq[dq.size() - 2].intersect(newLine) <= dq[dq.size() - 2].intersect(dq.back())) {
+            dq.pop_back();
+        }
+        dq.push_back(newLine);
+    }
+
+    long long ans = 9e18;
+    for (int j = firstNonZero; j < n; j++) {
+        long long cost = dp[j] + S1[n - 1] - S1[j] - j * (S0[n - 1] - S0[j]);
+        ans = min(ans, cost);
+    }
+
+    cout << ans << "\n";
 }
 
-int main()
-{
-  int t;
-  cin >> t;
-
-  while (t--)
-  {
-    cin >> n >> m;
-    vector<int> v(n);
-
-    for (int i = 0; i < n; i++)
-    {
-      cin >> v[i];
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    
+    int t;
+    cin >> t;
+    while (t--) {
+        solve();
     }
-
-    memset(dp, -1, sizeof(dp));
-
-    int firstNonZero = -1;
-    for (int i = 0; i < n; i++)
-    {
-      if (v[i] != 0)
-      {
-        firstNonZero = i;
-        break;
-      }
-    }
-
-    int ans = 0;
-    if (firstNonZero != -1)
-    {
-      ans = m + helper(firstNonZero + 1, firstNonZero, v);
-    }
-
-    cout << ans << endl;
-  }
-
-  return 0;
+    
+    return 0;
 }
